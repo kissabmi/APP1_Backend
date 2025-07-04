@@ -1,21 +1,25 @@
 import os
 import sys
 
-#чтобы `python src/main.py` тоже работал (а не только `python -m src.main`)
-#добавляем корень репо в path чтобы нашёлся пакет src
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.di.container import Container
+from flask import Flask
+from src.datasource.db import db
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+
+    return app
+
 
 if __name__ == "__main__":
-    #собираем граф зависимостей и запускаем сервер
-    container = Container()
-    app = container.get_app()
-
-    from src.domain.model.current_game import CurrentGame
-    from src.domain.model.game_field import GameField
-    for gid in ["abc", "game2"]:
-        container.get_service().save_game(CurrentGame(GameField(), gid))
-    print("starter games ready: id=abc, id=game2")
-
+    app = create_app()
+    print("Server running on http://127.0.0.1:5000")
     app.run(host="127.0.0.1", port=5000)
