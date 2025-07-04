@@ -129,3 +129,13 @@ Module.symvers
 Mkfile.old
 Makefile.old
 dkms.conf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
