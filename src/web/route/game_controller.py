@@ -207,4 +207,81 @@ def create_game_blueprint(game_service, authenticator):
     def index():
         return GAME_PAGE
 
+    @game_bp.route('/game/new', methods=['POST'])
+    @authenticator.authenticate
+    def new_game(user_id):
+        data = request.get_json()
+        if data is None or 'opponent' not in data:
+            return jsonify({"error": "opponent required"}), 400
+
+        opponent = data['opponent']
+        game = game_service.create_game(user_id, opponent)
+
+        return jsonify({
+            "game_id": game.get_id(),
+            "state": game.get_state()
+        }), 201
+
+    @game_bp.route('/game/avaliable', methods=['GET'])
+    @authenticator.authenticate
+    def available_games(user_id):
+        games = game_service.get_available_games()
+        result = []
+        for g in games:
+            result.append({
+                "game_id": g.get_id(),
+                "state": g.get_state(),
+                "player_x": g.get_player_x()
+            })
+        return jsonify(result), 200
+
+    @game_bp.route('/game/join/<game_id>', methods=['POST'])
+    @authenticator.authenticate
+    def join_game(game_id, user_id):
+        game = game_service.join_game(game_id, user_id)
+        if game is None:
+            return jsonify({"error": "cannot join game"}), 400
+
+        return jsonify({
+            "game_id": game.get_id(),
+            "state": game.get_state()
+        }), 200
+
+    @game_bp.route('/game/<game_id>', methods=['GET'])
+    @authenticator.authenticate
+    def get_game(game_id, user_id):
+        game = game_service.get_game(game_id)
+        if game is None:
+            return jsonify({"error": "game not found"}), 404
+
+        return jsonify({
+            "game_id": game.get_id(),
+            "field": game.get_field().get_field(),
+            "state": game.get_state(),
+            "player_x": game.get_player_x(),
+            "player_o": game.get_player_o()
+        }), 200
+
+    @game_bp.route('/game/<game_id>', methods=['POST'])
+    @authenticator.authenticate
+    def make_move(game_id, user_id):
+        data = request.get_json()
+        if data is None or 'field' not in data:
+            return jsonify({"error": "field required"}), 400
+
+        game, error = game_service.make_move(game_id, data['field'], user_id)
+        if error:
+            return jsonify({"error": error}), 400
+
+        return jsonify({
+            "game_id": game.get_id(),
+            "field": game.get_field().get_field(),
+            "state": game.get_state()
+        }), 200
+
+    @game_bp.route('/user/<user_id>', methods=['GET'])
+    @authenticator.authenticate
+    def get_user(user_id, **kwargs):
+        return jsonify({"error": "not implemented"}), 501
+
     return game_bp
