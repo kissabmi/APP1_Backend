@@ -13,7 +13,11 @@ class GameService(GameServiceInterface):
 
     def create_game(self, player_x, player_o):
         game = CurrentGame(player_x=player_x, player_o=player_o)
-        game.set_state(GameState.PLAYER_X_TURN)
+        # против компьютера — сразу можно ходить, против игрока — ждём присоединения
+        if player_o == 'computer':
+            game.set_state(GameState.PLAYER_X_TURN)
+        else:
+            game.set_state(GameState.WAITING)
         self._save(game)
         return game
 
@@ -56,7 +60,12 @@ class GameService(GameServiceInterface):
         if not is_player_x and not is_player_o:
             return None, "you are not in this game"
 
-        # БАГ: не проверяем чей сейчас ход — пропускаем любой ход участника
+        # проверяем чей сейчас ход
+        if state == GameState.PLAYER_X_TURN and not is_player_x:
+            return None, "not your turn"
+        if state == GameState.PLAYER_O_TURN and not is_player_o:
+            return None, "not your turn"
+
         new_game = CurrentGame(GameField(field), game_id)
         new_game.set_state(state)
         new_game.player_x = previous.get_player_x()
@@ -77,6 +86,17 @@ class GameService(GameServiceInterface):
                 new_game.set_state(GameState.PLAYER_O_TURN)
             else:
                 new_game.set_state(GameState.PLAYER_X_TURN)
+
+            # если оппонент компьютер — он ходит сразу после игрока
+            if new_game.get_state() == GameState.PLAYER_O_TURN and previous.get_player_o() == 'computer':
+                self.get_next_move(new_game)
+                result2 = self.check_game_over(new_game)
+                if result2 == GameField.PLAYER_O:
+                    new_game.set_state(GameState.VICTORY_O)
+                elif result2 == -1:
+                    new_game.set_state(GameState.DRAW)
+                else:
+                    new_game.set_state(GameState.PLAYER_X_TURN)
 
         self._save(new_game)
         return new_game, None

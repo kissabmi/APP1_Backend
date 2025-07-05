@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask
 from src.datasource.db import db
+from src.di.container import Container
 
 
 def create_app():
@@ -15,6 +16,10 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+
+    container = Container()
+    app.register_blueprint(container.get_auth_blueprint())
+    app.register_blueprint(container.get_game_blueprint())
 
     return app
 
