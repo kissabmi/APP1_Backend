@@ -24,18 +24,18 @@ In this project, you will learn how to add databases to web applications in Pyth
 
 ### Instructions
 
-1. Throughout the course, you will often feel uncertain and lacking information — this is normal. Remember, the repository and Google are always available to you, as well as your peers and Rocket.Chat. Communicate, search, rely on common sense, and don’t be afraid to make mistakes.
-2. Be attentive to your sources of information. Verify, think critically, analyze, and compare.
-3. Read the tasks carefully. Read them multiple times.
-4. It’s also best to read the examples carefully, as they may contain information not explicitly stated in the task.
-5. You may encounter contradictions when something new in the task or example conflicts with what you already know. If that happens, try to figure it out. If you cannot, write down the question as an open issue and resolve it during your work. Don’t leave open questions unresolved.
-6. If a task seems unclear or impossible, it only seems so. Try to break it down — most likely the parts will become clear.
-7. You will encounter various tasks. Those marked with an asterisk (\*) are for the more meticulous — they are more challenging and optional. Completing them will give you additional experience and knowledge.
-8. Don’t try to cheat the system or others. In the end, you only cheat yourself.
-9. Have a question? Ask the peer on your right. If that doesn’t help, ask the one on your left.
-10. When receiving help, always make sure to understand why, how, and what for. Otherwise, the help is meaningless.
-11. Always push only to the develop branch! The master branch will be ignored. Work inside the src directory.
-12. Your directory should contain only the files specified in the tasks.
+1. Throughout the course, you will often feel uncertain and have limited information, but that's all part of the experience. Remember, the repository and Google are always there for you. So are your peers and Rocket.Chat. Talk. Search. Use your common sense. Don't be afraid to make mistakes.
+2. Be mindful of your sources. Cross-check. Think critically. Analyze. Compare.
+3. Read the tasks carefully, and then read them again.
+4. Pay close attention to the examples, too. They may include information that is not explicitly stated in the task itself.
+5. You may encounter inconsistencies when something in the task or example contradicts what you thought you knew. Try to figure them out. If you can't, write it down as an open question and resolve it as you go. Don't leave questions unresolved.
+6. If a task seems unclear or impossible, it probably just feels that way. Break it down into parts. Most of them will make sense on their own.
+7. You’ll encounter all kinds of tasks. The bonus ones are for those who are curious and detail-oriented. They’re optional and more challenging, but completing them gives you extra experience and insight.
+8. Don't try to cheat the system or your peers. Ultimately, you'll only be cheating yourself.
+9. Got a question? Ask the peer to your right. If that doesn't help, ask the peer to your left.
+10. When asking for help, always make sure you understand the why, how, and what-for. Otherwise, the help won't be very useful.
+11. Always push your code to the develop branch only. The master branch will be ignored. Work inside the src directory.
+12. Your directory should not contain any files besides those required for the tasks.
 
 ## Chapter II
 
@@ -48,7 +48,7 @@ Authorization tools control access of legitimate users to system resources, gran
 #### Identification, Authentication, Authorization
 
 - **Identification** is the process by which a subject’s unique identifier is established, unambiguously defining them within an information system.
-- **Authentication** is the procedure of verifying authenticity—for example, validating a user by comparing the entered password with the stored password in the system.
+- **Authentication** is the procedure of verifying authenticity — for example, validating a user by comparing the entered password with the stored password in the system.
 - **Authorization** is the granting of rights to a specific individual or group to perform a defined set of actions.
 
 #### Authorization Using Login and Password
@@ -62,11 +62,11 @@ The client sends a request to the server and receives an "Unauthorized" message 
 
 ### Topics to Study
 
-- Web application
-- Authorization using login and password pair (basic auth)
-- PostgreSQL
-- Flask
-- SQLAlchemy
+- Web application,
+- Authorization using login and password pair (basic auth),
+- PostgreSQL,
+- Flask,
+- SQLAlchemy.
 
 ## Chapter III
 
