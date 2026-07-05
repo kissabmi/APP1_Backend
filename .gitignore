@@ -139,3 +139,7 @@ __pycache__/
 .venv/
 venv/
 
+
+.vscode/
+*.session.sql
+__pycache__/
