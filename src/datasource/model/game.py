@@ -1,5 +1,6 @@
 import uuid
 import json
+from datetime import datetime, timezone
 from src.datasource.db import db
 
 
@@ -11,6 +12,7 @@ class GameModel(db.Model):
     state = db.Column(db.String(20), nullable=False, default='waiting')
     player_x = db.Column(db.String(36), nullable=True)
     player_o = db.Column(db.String(36), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     def __init__(self, game_id=None, field_data=None, state=None, player_x=None, player_o=None):
         self.id = game_id or str(uuid.uuid4())

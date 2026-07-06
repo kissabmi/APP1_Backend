@@ -13,7 +13,6 @@ class GameService(GameServiceInterface):
 
     def create_game(self, player_x, player_o):
         game = CurrentGame(player_x=player_x, player_o=player_o)
-        # против компьютера — сразу можно ходить, против игрока — ждём присоединения
         if player_o == 'computer':
             game.set_state(GameState.PLAYER_X_TURN)
         else:
@@ -42,6 +41,27 @@ class GameService(GameServiceInterface):
         models = self._repository.find_available()
         return [self._to_domain(m) for m in models]
 
+    def get_finished_games(self, user_id):
+        models = self._repository.find_finished_for_user(user_id)
+        return [
+            {
+                "game_id": m.id,
+                "field": m.get_field(),
+                "state": m.state,
+                "player_x": m.player_x,
+                "player_o": m.player_o,
+                "created_at": m.created_at.isoformat() if m.created_at else None
+            }
+            for m in models
+        ]
+
+    def get_leaderboard(self, n):
+        rows = self._repository.get_leaderboard(n)
+        return [
+            {"uuid": row.uuid, "login": row.login, "win_ratio": float(row.win_ratio)}
+            for row in rows
+        ]
+
     def make_move(self, game_id, field, user_id):
         previous = self.get_game(game_id)
         if previous is None:
@@ -60,7 +80,6 @@ class GameService(GameServiceInterface):
         if not is_player_x and not is_player_o:
             return None, "you are not in this game"
 
-        # проверяем чей сейчас ход
         if state == GameState.PLAYER_X_TURN and not is_player_x:
             return None, "not your turn"
         if state == GameState.PLAYER_O_TURN and not is_player_o:
@@ -87,7 +106,6 @@ class GameService(GameServiceInterface):
             else:
                 new_game.set_state(GameState.PLAYER_X_TURN)
 
-            # если оппонент компьютер — он ходит сразу после игрока
             if new_game.get_state() == GameState.PLAYER_O_TURN and previous.get_player_o() == 'computer':
                 self.get_next_move(new_game)
                 result2 = self.check_game_over(new_game)
@@ -202,6 +220,6 @@ class GameService(GameServiceInterface):
 
     def _to_domain(self, model):
         field = GameField(model.get_field())
-        return CurrentGame(
-            field, model.id, model.state, model.player_x, model.player_o
-        )
+        return CurrentGame(field, model.id, model.state, model.player_x, model.player_o)
+
+

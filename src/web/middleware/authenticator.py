@@ -1,29 +1,26 @@
-import base64
 from functools import wraps
-from flask import request, jsonify
+
+from flask import jsonify, request
+
+from src.datasource.repository.user_repository import UserRepository
 
 
 class UserAuthenticator:
-    def __init__(self, auth_service):
-        self._auth_service = auth_service
+    def __init__(self, jwt_provider):
+        self._jwt_provider = jwt_provider
+        self._user_repo = UserRepository()
 
     def authenticate(self, f):
         @wraps(f)
         def decorated(*args, **kwargs):
             auth_header = request.headers.get('Authorization')
-            if not auth_header or not auth_header.startswith('Basic '):
+            if not auth_header or not auth_header.startswith('Bearer '):
                 return jsonify({"error": "authorization required"}), 401
 
-            try:
-                encoded = auth_header.split(' ', 1)[1]
-                decoded = base64.b64decode(encoded).decode('utf-8')
-                login, password = decoded.split(':', 1)
-            except Exception:
-                return jsonify({"error": "invalid authorization format"}), 401
-
-            user_id = self._auth_service.authorize(login, password)
+            token = auth_header.split(' ', 1)[1]
+            user_id = self._jwt_provider.validate_access_token(token)
             if user_id is None:
-                return jsonify({"error": "invalid credentials"}), 401
+                return jsonify({"error": "invalid or expired token"}), 401
 
             kwargs['user_id'] = user_id
             return f(*args, **kwargs)

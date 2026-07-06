@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify, request
 
-
 GAME_PAGE = """
 <!doctype html>
 <html lang='ru'>
@@ -83,8 +82,8 @@ GAME_PAGE = """
   <input id='lg' placeholder='логин' autocomplete='off'>
   <input id='pw' type='password' placeholder='пароль' autocomplete='off'>
   <div>
-    <button class='btn-primary' onclick='doAuth(\"/signup\")'>Регистрация</button>
-    <button class='btn-secondary' onclick='doAuth(\"/login\")'>Вход</button>
+    <button class='btn-primary' onclick='doAuth("/signup")'>Регистрация</button>
+    <button class='btn-secondary' onclick='doAuth("/login")'>Вход</button>
   </div>
   <p id='lerr'></p>
   <p style='font-size:12px;color:#888;margin-top:10px'>
@@ -102,8 +101,8 @@ GAME_PAGE = """
   <div class='card'>
     <h2>Новая игра</h2>
     <div class='actions'>
-      <button class='g' onclick='newGame(\"computer\")'>Против компьютера</button>
-      <button class='o' onclick='newGame(\"user\")'>Против игрока</button>
+      <button class='g' onclick='newGame("computer")'>Против компьютера</button>
+      <button class='o' onclick='newGame("user")'>Против игрока</button>
       <button class='r' onclick='loadGames()'>Обновить список</button>
     </div>
   </div>
@@ -111,6 +110,22 @@ GAME_PAGE = """
   <div class='card'>
     <h2>Доступные игры (ожидают игрока)</h2>
     <div id='gamesList'><div class='empty'>нет доступных игр</div></div>
+  </div>
+
+  <div class='card'>
+    <h2>История игр</h2>
+    <div class='actions'>
+      <button class='r' onclick='loadHistory()'>Показать</button>
+    </div>
+    <div id='historyList'><div class='empty'>нажми «Показать»</div></div>
+  </div>
+
+  <div class='card'>
+    <h2>Таблица лидеров</h2>
+    <div class='actions'>
+      <button class='r' onclick='loadLeaderboard()'>Показать топ-10</button>
+    </div>
+    <div id='leaderboardList'><div class='empty'>нажми «Показать»</div></div>
   </div>
 
   <div class='card' id='boardcard' style='display:none'>
@@ -135,8 +150,6 @@ async function doAuth(ep){
   const lg = document.getElementById('lg').value.trim();
   const pw = document.getElementById('pw').value;
   if(!lg || !pw){ setErr('введи логин и пароль'); return; }
-  const b64 = btoa(lg + ':' + pw);
-  // регистрация — JSON, вход — сразу Basic auth
   if(ep === '/signup'){
     let r = await fetch('/signup', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -145,23 +158,26 @@ async function doAuth(ep){
     let d = await r.json();
     if(d.error){ setErr(d.error); return; }
   }
-  // логин через Basic auth
-  let r = await fetch('/login', { method:'POST', headers:{'Authorization':'Basic '+b64} });
+  let r = await fetch('/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({login:lg, password:pw})
+  });
   let d = await r.json();
   if(d.error){ setErr(d.error); return; }
-  auth = b64; uid = d.user_id;
+  auth = d.accessToken;
   localStorage.setItem('auth', auth);
-  localStorage.setItem('uid', uid);
   await enterGame();
 }
 
 async function enterGame(){
   document.getElementById('login').style.display = 'none';
   document.getElementById('game').style.display = 'block';
-  // узнаём свой логин
-  const r = await fetch('/user/' + uid, { headers:{'Authorization':'Basic '+auth} });
+  const r = await fetch('/me', { headers:{'Authorization':'Bearer '+auth} });
   const d = await r.json();
+  if(d.error){ logout(); return; }
   myLogin = d.login || '?';
+  uid = d.user_id;
+  localStorage.setItem('uid', uid);
   document.getElementById('mylogin').textContent = myLogin;
   loadGames();
 }
@@ -175,11 +191,9 @@ function logout(){
   document.getElementById('game').style.display = 'none';
 }
 
-function emptyField(){ return [[0,0,0],[0,0,0],[0,0,0]]; }
-
 async function newGame(opp){
   const r = await fetch('/game/new', {
-    method:'POST', headers:{'Authorization':'Basic '+auth,'Content-Type':'application/json'},
+    method:'POST', headers:{'Authorization':'Bearer '+auth,'Content-Type':'application/json'},
     body: JSON.stringify({opponent: opp})
   });
   const d = await r.json();
@@ -192,13 +206,12 @@ async function openGame(gid){
   document.getElementById('boardcard').style.display = 'block';
   await refreshGame();
   if(pollTimer){ clearInterval(pollTimer); }
-  // опрашиваем сервер каждые 2 сек чтобы видеть ход соперника
   pollTimer = setInterval(refreshGame, 2000);
 }
 
 async function refreshGame(){
   if(!currentGameId) return;
-  const r = await fetch('/game/' + currentGameId, { headers:{'Authorization':'Basic '+auth} });
+  const r = await fetch('/game/' + currentGameId, { headers:{'Authorization':'Bearer '+auth} });
   const d = await r.json();
   if(d.error){ document.getElementById('status').textContent = d.error; return; }
   renderBoard(d);
@@ -214,7 +227,6 @@ function renderBoard(g){
   const b = document.getElementById('board');
   b.innerHTML = '';
   const mark = myMark(g);
-  // можно ли мне ходить
   const myTurn = (g.state==='x_turn' && amIPlayerX(g)) || (g.state==='o_turn' && amIPlayerO(g));
   const gameOver = g.state==='draw' || g.state.startsWith('victory');
 
@@ -233,38 +245,35 @@ function renderBoard(g){
     }
   }
 
-  // роль
   let role = '';
   if(mark===1) role = '(ты X)';
   else if(mark===2) role = '(ты O)';
   else role = '(зритель)';
   document.getElementById('myrole').textContent = role;
 
-  // инфо об игре
   const info = 'Игра: ' + currentGameId.slice(0,8) + '... — X: ' + (g.player_x? g.player_x.slice(0,8):'нет') + ', O: ' + (g.player_o? (g.player_o==='computer'?'комп':g.player_o.slice(0,8)):'нет');
   document.getElementById('gameinfo').textContent = info;
   document.getElementById('gidbox').textContent = 'ID: ' + currentGameId;
 
-  // статус
   const st = document.getElementById('status');
   st.className = 'status';
   if(g.state==='waiting'){
-    st.textContent = '⏳ Ожидание второго игрока...';
+    st.textContent = 'Ожидание второго игрока...';
     st.classList.add('wait');
   } else if(g.state==='draw'){
-    st.textContent = '🤝 Ничья!';
+    st.textContent = 'Ничья!';
     st.classList.add('draw');
   } else if(g.state==='victory_x'){
-    st.textContent = mark===1? '🎉 Ты выиграл (X)!' : mark===2? '😢 Ты проиграл (O)' : 'X выиграл';
+    st.textContent = mark===1? 'Ты выиграл (X)!' : mark===2? 'Ты проиграл (O)' : 'X выиграл';
     st.classList.add(mark===1?'win': mark===2?'lose':'draw');
   } else if(g.state==='victory_o'){
-    st.textContent = mark===2? '🎉 Ты выиграл (O)!' : mark===1? '😢 Ты проиграл (X)' : 'O выиграл';
+    st.textContent = mark===2? 'Ты выиграл (O)!' : mark===1? 'Ты проиграл (X)' : 'O выиграл';
     st.classList.add(mark===2?'win': mark===1?'lose':'draw');
   } else if(g.state==='x_turn'){
-    st.textContent = amIPlayerX(g)? '🎯 Твой ход (X)' : '⏳ Ход соперника (X)...';
+    st.textContent = amIPlayerX(g)? 'Твой ход (X)' : 'Ход соперника (X)...';
     st.classList.add('turn');
   } else if(g.state==='o_turn'){
-    st.textContent = amIPlayerO(g)? '🎯 Твой ход (O)' : '⏳ Ход соперника (O)...';
+    st.textContent = amIPlayerO(g)? 'Твой ход (O)' : 'Ход соперника (O)...';
     st.classList.add('turn');
   }
 
@@ -272,17 +281,15 @@ function renderBoard(g){
 }
 
 async function makeMove(r,c){
-  // сначала получаем текущее поле
-  const gr = await fetch('/game/' + currentGameId, { headers:{'Authorization':'Basic '+auth} });
+  const gr = await fetch('/game/' + currentGameId, { headers:{'Authorization':'Bearer '+auth} });
   const g = await gr.json();
   if(g.error) return;
   if(g.field[r][c] !== 0) return;
-  // ставим свою метку
   const f = g.field.map(row => row.slice());
   const mark = myMark(g);
   f[r][c] = mark;
   const r2 = await fetch('/game/' + currentGameId, {
-    method:'POST', headers:{'Authorization':'Basic '+auth,'Content-Type':'application/json'},
+    method:'POST', headers:{'Authorization':'Bearer '+auth,'Content-Type':'application/json'},
     body: JSON.stringify({field: f})
   });
   const d = await r2.json();
@@ -291,19 +298,19 @@ async function makeMove(r,c){
 }
 
 async function loadGames(){
-  const r = await fetch('/game/available', { headers:{'Authorization':'Basic '+auth} });
+  const r = await fetch('/game/available', { headers:{'Authorization':'Bearer '+auth} });
   const d = await r.json();
   const list = document.getElementById('gamesList');
-  if(d.error){ list.innerHTML = '<div class=\"empty\">'+d.error+'</div>'; return; }
-  if(!d.length){ list.innerHTML = '<div class=\"empty\">нет доступных игр — создай новую «Против игрока»</div>'; return; }
+  if(d.error){ list.innerHTML = '<div class="empty">'+d.error+'</div>'; return; }
+  if(!d.length){ list.innerHTML = '<div class="empty">нет доступных игр — создай новую «Против игрока»</div>'; return; }
   list.innerHTML = '';
   for(const g of d){
     const div = document.createElement('div');
     div.className = 'gitem';
     const isMine = (g.player_x === uid);
-    div.innerHTML = '<span class=\"gid\">ID: ' + g.game_id.slice(0,8) + '... (создал: ' + (g.player_x? g.player_x.slice(0,8):'?') + ')</span>';
+    div.innerHTML = '<span class="gid">ID: ' + g.game_id.slice(0,8) + '... (создал: ' + (g.player_x? g.player_x.slice(0,8):'?') + ')</span>';
     if(isMine){
-      div.innerHTML += '<span style=\"color:#999;font-size:13px\">твоя — жди</span>';
+      div.innerHTML += '<span style="color:#999;font-size:13px">твоя — жди</span>';
       div.onclick = () => openGame(g.game_id);
     } else {
       const btn = document.createElement('button');
@@ -317,19 +324,55 @@ async function loadGames(){
 }
 
 async function joinGame(gid){
-  const r = await fetch('/game/join/' + gid, { method:'POST', headers:{'Authorization':'Basic '+auth} });
+  const r = await fetch('/game/join/' + gid, { method:'POST', headers:{'Authorization':'Bearer '+auth} });
   const d = await r.json();
   if(d.error){ alert(d.error); return; }
   openGame(gid);
 }
 
-// авто-вход если есть сохранённая сессия
-if(auth && uid){
-  fetch('/user/' + uid, { headers:{'Authorization':'Basic '+auth} })
+async function loadHistory(){
+  const r = await fetch('/game/history', { headers:{'Authorization':'Bearer '+auth} });
+  const d = await r.json();
+  const list = document.getElementById('historyList');
+  if(d.error){ list.innerHTML = '<div class="empty">'+d.error+'</div>'; return; }
+  if(!d.length){ list.innerHTML = '<div class="empty">нет завершённых игр</div>'; return; }
+  list.innerHTML = '';
+  for(const g of d){
+    const div = document.createElement('div');
+    div.className = 'gitem';
+    const date = g.created_at ? new Date(g.created_at).toLocaleString() : '?';
+    let result = '';
+    if(g.state === 'draw') result = 'Ничья';
+    else if(g.state === 'victory_x') result = (g.player_x === uid) ? 'Победа' : 'Поражение';
+    else if(g.state === 'victory_o') result = (g.player_o === uid) ? 'Победа' : 'Поражение';
+    div.innerHTML = '<span class="gid">' + date + ' — ' + result + '</span>';
+    div.onclick = () => openGame(g.game_id);
+    list.appendChild(div);
+  }
+}
+
+async function loadLeaderboard(){
+  const r = await fetch('/game/leaderboard?n=10', { headers:{'Authorization':'Bearer '+auth} });
+  const d = await r.json();
+  const list = document.getElementById('leaderboardList');
+  if(d.error){ list.innerHTML = '<div class="empty">'+d.error+'</div>'; return; }
+  if(!d.length){ list.innerHTML = '<div class="empty">нет данных</div>'; return; }
+  list.innerHTML = '';
+  d.forEach((u, i) => {
+    const div = document.createElement('div');
+    div.className = 'gitem';
+    const pct = Math.round(u.win_ratio * 100);
+    div.innerHTML = '<span class="gid">' + (i+1) + '. ' + u.login + ' — ' + pct + '% побед</span>';
+    list.appendChild(div);
+  });
+}
+
+if(auth){
+  fetch('/me', { headers:{'Authorization':'Bearer '+auth} })
     .then(r => r.json())
     .then(d => {
       if(d.error){ logout(); }
-      else { enterGame(); }
+      else { uid = d.user_id; localStorage.setItem('uid', uid); enterGame(); }
     })
     .catch(() => logout());
 }
@@ -420,19 +463,19 @@ def create_game_blueprint(game_service, authenticator):
             "state": game.get_state()
         }), 200
 
-    @game_bp.route('/user/<user_id>', methods=['GET'])
+    @game_bp.route('/game/history', methods=['GET'])
     @authenticator.authenticate
-    def get_user(user_id, **kwargs):
-        from src.domain.service.user_service_impl import UserService
-        from src.datasource.repository.user_repository import UserRepository
-        user_service = UserService(UserRepository())
-        user = user_service.find_by_id(user_id)
-        if user is None:
-            return jsonify({"error": "user not found"}), 404
+    def game_history(user_id):
+        games = game_service.get_finished_games(user_id)
+        return jsonify(games), 200
 
-        return jsonify({
-            "user_id": user.user_id,
-            "login": user.login
-        }), 200
+    @game_bp.route('/game/leaderboard', methods=['GET'])
+    @authenticator.authenticate
+    def leaderboard(user_id):
+        n = request.args.get('n', default=10, type=int)
+        if n < 1:
+            n = 10
+        leaders = game_service.get_leaderboard(n)
+        return jsonify(leaders), 200
 
     return game_bp

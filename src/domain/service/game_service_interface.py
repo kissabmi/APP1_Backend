@@ -1,8 +1,4 @@
-from src.domain.model.current_game import CurrentGame
-
-
 class GameServiceInterface:
-
     def get_next_move(self, current_game):
         raise NotImplementedError
 
@@ -25,4 +21,10 @@ class GameServiceInterface:
         raise NotImplementedError
 
     def get_available_games(self):
+        raise NotImplementedError
+
+    def get_finished_games(self, user_id):
+        raise NotImplementedError
+
+    def get_leaderboard(self, n):
         raise NotImplementedError
