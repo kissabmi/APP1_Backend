@@ -129,3 +129,17 @@ Module.symvers
 Mkfile.old
 Makefile.old
 dkms.conf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.env
+*.log
+.DS_Store
