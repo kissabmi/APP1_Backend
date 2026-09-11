@@ -10,7 +10,10 @@ from src.di.container import Container
 
 def create_app():
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("Set DATABASE_URL; see RUN.md")
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 

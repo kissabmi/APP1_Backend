@@ -1,0 +1,19 @@
+name: school21-backend05
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: school21
+      POSTGRES_DB: school21
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?First create .env as described in README}
+    ports:
+      - "127.0.0.1:55405:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U school21 -d school21"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+volumes:
+  pgdata:
